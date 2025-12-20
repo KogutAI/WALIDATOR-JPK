@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Darmowy Walidator JPK (Client-side)</title>
-    <!-- Tailwind CSS przez CDN (naprawia błąd dyrektyw) -->
+    <!-- Tailwind CSS przez CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Ikony -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -56,18 +56,23 @@
 
         <!-- Sekcja Uploadu -->
         <div class="w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100 transition-all duration-300 hover:shadow-2xl" id="drop-zone">
-            <!-- Dodane id="drop-area" dla precyzyjnego targetowania -->
+            
+            <!-- POPRAWKA: relative group jest tutaj kluczowe -->
             <div id="drop-area" class="p-10 flex flex-col items-center justify-center border-b border-slate-100 border-dashed m-2 rounded-xl bg-slate-50/50 hover:bg-brand-50/30 transition-colors cursor-pointer relative group">
                 
-                <input type="file" id="file-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".xml">
+                <!-- POPRAWKA: Dodano 'z-50', aby input był NA WIERZCHU i przechwytywał kliknięcia -->
+                <input type="file" id="file-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50" accept=".xml">
                 
-                <div class="w-16 h-16 bg-brand-100 text-brand-600 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                    <i class="fa-solid fa-cloud-arrow-up text-2xl"></i>
+                <!-- POPRAWKA: Dodano 'pointer-events-none', aby tekst nie blokował inputa ani drag&drop -->
+                <div class="pointer-events-none flex flex-col items-center">
+                    <div class="w-16 h-16 bg-brand-100 text-brand-600 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                        <i class="fa-solid fa-cloud-arrow-up text-2xl"></i>
+                    </div>
+                    
+                    <h3 class="text-lg font-semibold text-slate-900 mb-1">Przeciągnij plik XML tutaj</h3>
+                    <p class="text-slate-500 text-sm">lub kliknij, aby wybrać plik z dysku</p>
+                    <p class="text-xs text-slate-400 mt-4 font-mono">Obsługiwane: JPK_V7M, JPK_V7K, JPK_FA</p>
                 </div>
-                
-                <h3 class="text-lg font-semibold text-slate-900 mb-1">Przeciągnij plik XML tutaj</h3>
-                <p class="text-slate-500 text-sm">lub kliknij, aby wybrać plik z dysku</p>
-                <p class="text-xs text-slate-400 mt-4 font-mono">Obsługiwane: JPK_V7M, JPK_V7K, JPK_FA</p>
             </div>
 
             <!-- Panel Wyników (domyślnie ukryty) -->
@@ -96,7 +101,7 @@
                         <span class="block text-slate-400 text-xs uppercase tracking-wider font-semibold mb-1">Okres rozliczeniowy</span>
                         <span id="jpk-date" class="text-slate-900 font-medium">-</span>
                     </div>
-                    <!-- Proste statystyki -->
+                    <!-- Statystyki -->
                     <div class="p-3 bg-slate-50 rounded-lg md:col-span-2 hidden" id="stats-container">
                         <span class="block text-slate-400 text-xs uppercase tracking-wider font-semibold mb-1">Liczba faktur sprzedaży</span>
                         <span id="jpk-sales-count" class="text-slate-900 font-medium">-</span>
@@ -104,7 +109,7 @@
                 </div>
 
                 <!-- Debug / Errors -->
-                <div id="error-box" class="hidden mt-4 p-3 bg-red-50 text-red-700 text-sm rounded border border-red-100"></div>
+                <div id="error-box" class="hidden mt-4 p-3 bg-red-50 text-red-700 text-sm rounded border border-red-100 font-mono break-all"></div>
             </div>
         </div>
 
@@ -118,9 +123,9 @@
     <script>
         const fileInput = document.getElementById('file-input');
         const resultPanel = document.getElementById('result-panel');
-        const dropArea = document.getElementById('drop-area'); // Używamy ID zamiast querySelector
+        const dropArea = document.getElementById('drop-area');
         
-        // Elementy UI do aktualizacji
+        // Elementy UI
         const statusIcon = document.getElementById('status-icon');
         const statusTitle = document.getElementById('status-title');
         const fileNameEl = document.getElementById('file-name');
@@ -131,9 +136,8 @@
         const statsContainer = document.getElementById('stats-container');
         const jpkSalesCount = document.getElementById('jpk-sales-count');
 
-        // --- Obsługa Drag & Drop (Poprawiona) ---
-        
-        // Zapobieganie domyślnym akcjom przeglądarki (otwieranie pliku)
+        // --- Obsługa Drag & Drop ---
+
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             dropArea.addEventListener(eventName, preventDefaults, false);
             document.body.addEventListener(eventName, preventDefaults, false);
@@ -144,7 +148,6 @@
             e.stopPropagation();
         }
 
-        // Podświetlanie obszaru
         ['dragenter', 'dragover'].forEach(eventName => {
             dropArea.addEventListener(eventName, highlight, false);
         });
@@ -161,7 +164,6 @@
             dropArea.classList.remove('bg-brand-50', 'border-brand-300');
         }
 
-        // Obsługa upuszczenia pliku
         dropArea.addEventListener('drop', handleDrop, false);
 
         function handleDrop(e) {
@@ -170,12 +172,13 @@
             handleFiles(files);
         }
 
-        // Obsługa wyboru z inputa
+        // --- Obsługa kliknięcia (standardowy input) ---
+        
         fileInput.addEventListener('change', function(e) {
             handleFiles(this.files);
         });
 
-        // --- Logika Przetwarzania ---
+        // --- Główna logika ---
 
         function handleFiles(files) {
             if (!files || files.length === 0) return;
@@ -188,27 +191,33 @@
             statsContainer.classList.add('hidden');
             fileNameEl.textContent = file.name;
             
-            // Loading state
+            // Loading UI
             statusTitle.textContent = "Analizowanie pliku...";
             statusIcon.className = "w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0 bg-blue-100 text-blue-600";
             statusIcon.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+            // Sprawdzenie rozszerzenia (opcjonalne, ale pomocne)
+            if (!file.name.toLowerCase().endsWith('.xml')) {
+                showError("To nie wygląda na plik XML. Wybierz plik z rozszerzeniem .xml");
+                return;
+            }
 
             const reader = new FileReader();
             
             reader.onload = function(e) {
                 const content = e.target.result;
-                // Krótkie opóźnienie dla UX (żeby spinner nie mignął zbyt szybko)
                 setTimeout(() => {
                     try {
                         parseJPK(content);
                     } catch (err) {
-                        showError("Błąd parsowania: " + err.message);
+                        showError("Błąd odczytu: " + err.message);
+                        console.error(err);
                     }
                 }, 300);
             };
 
             reader.onerror = function() {
-                showError("Nie udało się odczytać pliku.");
+                showError("Nie udało się odczytać pliku. Sprawdź uprawnienia lub czy plik nie jest uszkodzony.");
             };
 
             reader.readAsText(file);
@@ -218,19 +227,27 @@
             const parser = new DOMParser();
             const xmlDoc = parser.parseFromString(xmlString, "text/xml");
 
-            // Sprawdź czy to poprawny XML
-            if (xmlDoc.getElementsByTagName("parsererror").length > 0) {
-                throw new Error("Plik nie jest poprawnym formatem XML.");
+            // 1. Sprawdź błędy parsera XML
+            const parserError = xmlDoc.getElementsByTagName("parsererror");
+            if (parserError.length > 0) {
+                throw new Error("Niepoprawna składnia XML.");
             }
 
-            // Prosta detekcja czy to w ogóle JPK
+            // 2. Sprawdź czy to plik JPK
             const root = xmlDoc.documentElement;
-            if (!root.nodeName.includes("JPK")) {
-                throw new Error("To nie wygląda na plik JPK (brak głównego węzła JPK).");
+            // Sprawdzamy czy w nazwie głównego tagu jest "JPK" (np. tns:JPK lub JPK)
+            if (!root.nodeName.toUpperCase().includes("JPK")) {
+                throw new Error(`To nie jest plik JPK. Główny element to: <${root.nodeName}>`);
             }
 
-            // Helper do wyciągania wartości tagów ignorujący namespace
+            // 3. Wyciąganie danych (odporne na namespace)
             const getTagVal = (tagName, parent = xmlDoc) => {
+                // Najpierw szukamy dokładnie po localName
+                const walker = document.createTreeWalker(parent, NodeFilter.SHOW_ELEMENT, null, false);
+                while(walker.nextNode()) {
+                    if(walker.currentNode.localName === tagName) return walker.currentNode.textContent;
+                }
+                // Fallback do prostego wyszukiwania
                 const els = parent.getElementsByTagName("*");
                 for (let i = 0; i < els.length; i++) {
                     if (els[i].localName === tagName) return els[i].textContent;
@@ -243,16 +260,26 @@
             const dataDo = getTagVal("DataDo");
             let nip = getTagVal("NIP");
 
-            // Sukces UI
+            // Logika specyficzna dla JPK_V7 (NIP jest w nagłówku w innej strukturze)
+            if (!nip) {
+                // Czasem NIP jest w elemencie IdentyfikatorPodmiotu -> NIP
+                const podmiot = Array.from(xmlDoc.getElementsByTagName("*")).find(el => el.localName === "Podmiot1");
+                if (podmiot) {
+                     const nipNode = Array.from(podmiot.children).find(el => el.localName === "NIP" || (el.localName === "IdentyfikatorPodmiotu" && getTagVal("NIP", el)));
+                     // To prosta heurystyka, w razie potrzeby można rozbudować
+                }
+            }
+
+            // Sukces
             statusIcon.className = "w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0 bg-green-100 text-green-600";
             statusIcon.innerHTML = '<i class="fa-solid fa-check"></i>';
             statusTitle.textContent = "Plik wygląda poprawnie";
             
-            jpkTypeEl.textContent = kodFormularza || "Nieznany kod";
-            jpkDateEl.textContent = `${dataOd || "?"}  —  ${dataDo || "?"}`;
+            jpkTypeEl.textContent = kodFormularza || "Nieznany typ";
+            jpkDateEl.textContent = (dataOd && dataDo) ? `${dataOd} — ${dataDo}` : "Brak daty";
             jpkNipEl.textContent = nip || "Brak / Nie znaleziono";
 
-            // Policzmy faktury sprzedaży (SprzedazWiersz)
+            // Licznik faktur (SprzedazWiersz / ZakupWiersz)
             let salesCount = 0;
             const allEls = xmlDoc.getElementsByTagName("*");
             for(let i=0; i<allEls.length; i++) {
