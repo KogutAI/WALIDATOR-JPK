@@ -241,7 +241,6 @@
             const findNode = (tagName, parent = xmlDoc) => {
                 const walker = document.createTreeWalker(parent, NodeFilter.SHOW_ELEMENT, null, false);
                 while(walker.nextNode()) {
-                    // Porównanie case-insensitive dla bezpieczeństwa, choć XML jest case-sensitive
                     if(walker.currentNode.localName.toLowerCase() === tagName.toLowerCase()) {
                         return walker.currentNode;
                     }
@@ -271,24 +270,31 @@
             let kodFormularza = null;
             let dataOd = null;
             let dataDo = null;
+            // Nowe zmienne dla JPK_V7 (gdzie daty są jako Rok/Miesiac)
+            let rok = null;
+            let miesiac = null;
             let nip = null;
 
-            // Krok A: Znajdź sekcję Naglowek (kluczowe dla dat)
+            // Krok A: Znajdź sekcję Naglowek
             const naglowekNode = findNode("Naglowek", root);
 
             if (naglowekNode) {
-                // Jeśli mamy nagłówek, szukamy w nim
                 kodFormularza = getChildText(naglowekNode, "KodFormularza");
                 dataOd = getChildText(naglowekNode, "DataOd");
                 dataDo = getChildText(naglowekNode, "DataDo");
+                // Pobieramy też Rok i Miesiąc (dla JPK_V7)
+                rok = getChildText(naglowekNode, "Rok");
+                miesiac = getChildText(naglowekNode, "Miesiac");
             } else {
-                // Fallback: szukaj gdziekolwiek w pliku (dla nietypowych struktur)
+                // Fallback
                 kodFormularza = getGlobalText("KodFormularza", root);
                 dataOd = getGlobalText("DataOd", root);
                 dataDo = getGlobalText("DataDo", root);
+                rok = getGlobalText("Rok", root);
+                miesiac = getGlobalText("Miesiac", root);
             }
 
-            // Krok B: Znajdź NIP (może być w Podmiot1 -> NIP lub Podmiot1 -> IdentyfikatorPodmiotu -> NIP)
+            // Krok B: Znajdź NIP
             const podmiotNode = findNode("Podmiot1", root) || findNode("Podmiot", root);
             
             if (podmiotNode) {
@@ -297,7 +303,6 @@
                 
                 // Wariant 2: Zagnieżdżony (JPK_V7)
                 if (!nip) {
-                    // Znajdź węzeł IdentyfikatorPodmiotu wśród dzieci
                     let idPodmiotuNode = null;
                     for(let child of podmiotNode.children) {
                         if (child.localName.toLowerCase() === "identyfikatorpodmiotu") {
@@ -310,7 +315,6 @@
                     }
                 }
             }
-            // Fallback dla NIP
             if (!nip) nip = getGlobalText("NIP", root);
 
 
@@ -321,9 +325,12 @@
             
             jpkTypeEl.textContent = kodFormularza || "Nieznany typ";
             
-            // Formatowanie daty
+            // Formatowanie daty (Obsługa DataOd/Do oraz Rok/Miesiac)
             if (dataOd && dataDo) {
                 jpkDateEl.textContent = `${dataOd} — ${dataDo}`;
+                jpkDateEl.classList.remove("text-red-500");
+            } else if (rok && miesiac) {
+                jpkDateEl.textContent = `Rok: ${rok} / Miesiąc: ${miesiac}`;
                 jpkDateEl.classList.remove("text-red-500");
             } else {
                 jpkDateEl.textContent = "Nie znaleziono dat (Sprawdź sekcję Naglowek)";
@@ -332,7 +339,7 @@
 
             jpkNipEl.textContent = nip || "Brak / Nie znaleziono";
 
-            // 5. Statystyki (Liczba wierszy sprzedaży)
+            // 5. Statystyki
             let salesCount = 0;
             const walker = document.createTreeWalker(xmlDoc, NodeFilter.SHOW_ELEMENT, null, false);
             while(walker.nextNode()) {
