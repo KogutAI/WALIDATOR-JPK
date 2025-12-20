@@ -57,13 +57,10 @@
         <!-- Sekcja Uploadu -->
         <div class="w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100 transition-all duration-300 hover:shadow-2xl" id="drop-zone">
             
-            <!-- POPRAWKA: relative group jest tutaj kluczowe -->
             <div id="drop-area" class="p-10 flex flex-col items-center justify-center border-b border-slate-100 border-dashed m-2 rounded-xl bg-slate-50/50 hover:bg-brand-50/30 transition-colors cursor-pointer relative group">
                 
-                <!-- POPRAWKA: Dodano 'z-50', aby input był NA WIERZCHU i przechwytywał kliknięcia -->
                 <input type="file" id="file-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50" accept=".xml">
                 
-                <!-- POPRAWKA: Dodano 'pointer-events-none', aby tekst nie blokował inputa ani drag&drop -->
                 <div class="pointer-events-none flex flex-col items-center">
                     <div class="w-16 h-16 bg-brand-100 text-brand-600 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
                         <i class="fa-solid fa-cloud-arrow-up text-2xl"></i>
@@ -196,7 +193,6 @@
             statusIcon.className = "w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0 bg-blue-100 text-blue-600";
             statusIcon.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
 
-            // Sprawdzenie rozszerzenia (opcjonalne, ale pomocne)
             if (!file.name.toLowerCase().endsWith('.xml')) {
                 showError("To nie wygląda na plik XML. Wybierz plik z rozszerzeniem .xml");
                 return;
@@ -235,60 +231,121 @@
 
             // 2. Sprawdź czy to plik JPK
             const root = xmlDoc.documentElement;
-            // Sprawdzamy czy w nazwie głównego tagu jest "JPK" (np. tns:JPK lub JPK)
             if (!root.nodeName.toUpperCase().includes("JPK")) {
                 throw new Error(`To nie jest plik JPK. Główny element to: <${root.nodeName}>`);
             }
 
-            // 3. Wyciąganie danych (odporne na namespace)
-            const getTagVal = (tagName, parent = xmlDoc) => {
-                // Najpierw szukamy dokładnie po localName
+            // --- Helpery do nawigacji po XML (ignorujące namespace) ---
+            
+            // Znajduje pierwszy węzeł o danej nazwie lokalnej (wewnątrz parenta)
+            const findNode = (tagName, parent = xmlDoc) => {
                 const walker = document.createTreeWalker(parent, NodeFilter.SHOW_ELEMENT, null, false);
                 while(walker.nextNode()) {
-                    if(walker.currentNode.localName === tagName) return walker.currentNode.textContent;
-                }
-                // Fallback do prostego wyszukiwania
-                const els = parent.getElementsByTagName("*");
-                for (let i = 0; i < els.length; i++) {
-                    if (els[i].localName === tagName) return els[i].textContent;
+                    // Porównanie case-insensitive dla bezpieczeństwa, choć XML jest case-sensitive
+                    if(walker.currentNode.localName.toLowerCase() === tagName.toLowerCase()) {
+                        return walker.currentNode;
+                    }
                 }
                 return null;
             };
 
-            const kodFormularza = getTagVal("KodFormularza");
-            const dataOd = getTagVal("DataOd");
-            const dataDo = getTagVal("DataDo");
-            let nip = getTagVal("NIP");
-
-            // Logika specyficzna dla JPK_V7 (NIP jest w nagłówku w innej strukturze)
-            if (!nip) {
-                // Czasem NIP jest w elemencie IdentyfikatorPodmiotu -> NIP
-                const podmiot = Array.from(xmlDoc.getElementsByTagName("*")).find(el => el.localName === "Podmiot1");
-                if (podmiot) {
-                     const nipNode = Array.from(podmiot.children).find(el => el.localName === "NIP" || (el.localName === "IdentyfikatorPodmiotu" && getTagVal("NIP", el)));
-                     // To prosta heurystyka, w razie potrzeby można rozbudować
+            // Zwraca wartość tekstową bezpośredniego dziecka o danej nazwie
+            const getChildText = (element, childName) => {
+                if (!element) return null;
+                for (let i = 0; i < element.children.length; i++) {
+                    if (element.children[i].localName.toLowerCase() === childName.toLowerCase()) {
+                        return element.children[i].textContent;
+                    }
                 }
+                return null;
+            };
+
+            // Zwraca wartość tekstową dowolnego węzła w dół drzewa (fallback)
+            const getGlobalText = (tagName, parent = xmlDoc) => {
+                const node = findNode(tagName, parent);
+                return node ? node.textContent : null;
+            };
+
+
+            // 3. Pobieranie Danych
+            let kodFormularza = null;
+            let dataOd = null;
+            let dataDo = null;
+            let nip = null;
+
+            // Krok A: Znajdź sekcję Naglowek (kluczowe dla dat)
+            const naglowekNode = findNode("Naglowek", root);
+
+            if (naglowekNode) {
+                // Jeśli mamy nagłówek, szukamy w nim
+                kodFormularza = getChildText(naglowekNode, "KodFormularza");
+                dataOd = getChildText(naglowekNode, "DataOd");
+                dataDo = getChildText(naglowekNode, "DataDo");
+            } else {
+                // Fallback: szukaj gdziekolwiek w pliku (dla nietypowych struktur)
+                kodFormularza = getGlobalText("KodFormularza", root);
+                dataOd = getGlobalText("DataOd", root);
+                dataDo = getGlobalText("DataDo", root);
             }
 
-            // Sukces
+            // Krok B: Znajdź NIP (może być w Podmiot1 -> NIP lub Podmiot1 -> IdentyfikatorPodmiotu -> NIP)
+            const podmiotNode = findNode("Podmiot1", root) || findNode("Podmiot", root);
+            
+            if (podmiotNode) {
+                // Wariant 1: Bezpośrednio w podmiocie (starsze JPK)
+                nip = getChildText(podmiotNode, "NIP");
+                
+                // Wariant 2: Zagnieżdżony (JPK_V7)
+                if (!nip) {
+                    // Znajdź węzeł IdentyfikatorPodmiotu wśród dzieci
+                    let idPodmiotuNode = null;
+                    for(let child of podmiotNode.children) {
+                        if (child.localName.toLowerCase() === "identyfikatorpodmiotu") {
+                            idPodmiotuNode = child;
+                            break;
+                        }
+                    }
+                    if (idPodmiotuNode) {
+                        nip = getChildText(idPodmiotuNode, "NIP");
+                    }
+                }
+            }
+            // Fallback dla NIP
+            if (!nip) nip = getGlobalText("NIP", root);
+
+
+            // 4. Prezentacja wyników
             statusIcon.className = "w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0 bg-green-100 text-green-600";
             statusIcon.innerHTML = '<i class="fa-solid fa-check"></i>';
             statusTitle.textContent = "Plik wygląda poprawnie";
             
             jpkTypeEl.textContent = kodFormularza || "Nieznany typ";
-            jpkDateEl.textContent = (dataOd && dataDo) ? `${dataOd} — ${dataDo}` : "Brak daty";
+            
+            // Formatowanie daty
+            if (dataOd && dataDo) {
+                jpkDateEl.textContent = `${dataOd} — ${dataDo}`;
+                jpkDateEl.classList.remove("text-red-500");
+            } else {
+                jpkDateEl.textContent = "Nie znaleziono dat (Sprawdź sekcję Naglowek)";
+                jpkDateEl.classList.add("text-red-500");
+            }
+
             jpkNipEl.textContent = nip || "Brak / Nie znaleziono";
 
-            // Licznik faktur (SprzedazWiersz / ZakupWiersz)
+            // 5. Statystyki (Liczba wierszy sprzedaży)
             let salesCount = 0;
-            const allEls = xmlDoc.getElementsByTagName("*");
-            for(let i=0; i<allEls.length; i++) {
-                if(allEls[i].localName === "SprzedazWiersz") salesCount++;
+            const walker = document.createTreeWalker(xmlDoc, NodeFilter.SHOW_ELEMENT, null, false);
+            while(walker.nextNode()) {
+                if (walker.currentNode.localName === "SprzedazWiersz") {
+                    salesCount++;
+                }
             }
             
             if (salesCount > 0) {
                 statsContainer.classList.remove('hidden');
                 jpkSalesCount.textContent = salesCount;
+            } else {
+                statsContainer.classList.add('hidden');
             }
         }
 
