@@ -59,7 +59,6 @@
             
             <div id="drop-area" class="p-10 flex flex-col items-center justify-center border-b border-main/10 border-dashed m-2 rounded-xl bg-main/5 hover:bg-accent/5 transition-colors cursor-pointer relative group">
                 
-                <!-- POPRAWKA: Dodano z-50 aby input był na wierzchu i zawsze klikalny -->
                 <input type="file" id="file-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50" accept=".xml">
                 
                 <div class="w-16 h-16 bg-accent/10 text-accent rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
@@ -83,8 +82,8 @@
                     </div>
                 </div>
 
-                <!-- Szczegóły -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <!-- Szczegóły Główne -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mb-6">
                     <div class="p-3 bg-main/5 rounded-lg">
                         <span class="block text-main/50 text-xs uppercase tracking-wider font-semibold mb-1">Typ formularza</span>
                         <span id="jpk-type" class="text-main font-medium font-mono text-base">-</span>
@@ -97,14 +96,37 @@
                         <span class="block text-main/50 text-xs uppercase tracking-wider font-semibold mb-1">Okres rozliczeniowy</span>
                         <span id="jpk-date" class="text-main font-medium">-</span>
                     </div>
-                    <!-- Proste statystyki -->
-                    <div class="p-3 bg-main/5 rounded-lg md:col-span-2 hidden" id="stats-container">
-                        <span class="block text-main/50 text-xs uppercase tracking-wider font-semibold mb-1">Liczba faktur sprzedaży</span>
-                        <span id="jpk-sales-count" class="text-main font-medium">-</span>
+                </div>
+
+                <!-- Nowa Sekcja: VAT UE -->
+                <div id="vat-ue-container" class="hidden mb-6 border border-accent/20 rounded-lg overflow-hidden">
+                    <div class="bg-accent/5 px-4 py-2 border-b border-accent/10 flex items-center gap-2">
+                        <i class="fa-solid fa-earth-europe text-accent"></i>
+                        <span class="text-xs font-bold uppercase tracking-wider text-main/80">Dane do deklaracji VAT-UE (Estymacja)</span>
+                    </div>
+                    <div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <span class="block text-main/50 text-xs mb-1">Suma WDT (K_21)</span>
+                            <span id="val-wdt" class="text-xl font-mono font-semibold text-main">0.00 zł</span>
+                            <span class="block text-xs text-main/40 mt-0.5">Wewnątrzwspólnotowa dostawa</span>
+                        </div>
+                        <div>
+                            <span class="block text-main/50 text-xs mb-1">Suma WNT (K_23)</span>
+                            <span id="val-wnt" class="text-xl font-mono font-semibold text-main">0.00 zł</span>
+                            <span class="block text-xs text-main/40 mt-0.5">Wewnątrzwspólnotowe nabycie</span>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Debug / Errors (używamy highlight/orange zamiast red) -->
+                <!-- Statystyki -->
+                <div id="stats-container" class="hidden p-3 bg-main/5 rounded-lg">
+                     <div class="flex justify-between items-center">
+                        <span class="text-main/50 text-xs uppercase tracking-wider font-semibold">Liczba faktur sprzedaży</span>
+                        <span id="jpk-sales-count" class="text-main font-bold">-</span>
+                     </div>
+                </div>
+
+                <!-- Debug / Errors -->
                 <div id="error-box" class="hidden mt-4 p-3 bg-highlight/10 text-highlight font-medium text-sm rounded border border-highlight/20"></div>
             </div>
         </div>
@@ -128,8 +150,14 @@
         const jpkNipEl = document.getElementById('jpk-nip');
         const jpkDateEl = document.getElementById('jpk-date');
         const errorBox = document.getElementById('error-box');
+        
         const statsContainer = document.getElementById('stats-container');
         const jpkSalesCount = document.getElementById('jpk-sales-count');
+        
+        // Elementy VAT UE
+        const vatUeContainer = document.getElementById('vat-ue-container');
+        const valWdtEl = document.getElementById('val-wdt');
+        const valWntEl = document.getElementById('val-wnt');
 
         // --- Obsługa Drag & Drop ---
         
@@ -171,7 +199,6 @@
 
         fileInput.addEventListener('change', function(e) {
             handleFiles(this.files);
-            // Reset wartości inputa, aby umożliwić ponowne wybranie tego samego pliku (np. po poprawce)
             this.value = null;
         });
 
@@ -185,9 +212,11 @@
             resultPanel.classList.remove('hidden');
             errorBox.classList.add('hidden');
             statsContainer.classList.add('hidden');
+            vatUeContainer.classList.add('hidden');
+            
             fileNameEl.textContent = file.name;
             
-            // Loading state (używamy koloru Main)
+            // Loading state
             statusTitle.textContent = "Analizowanie pliku...";
             statusIcon.className = "w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0 bg-main/10 text-main";
             statusIcon.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
@@ -225,34 +254,109 @@
                 throw new Error("To nie wygląda na plik JPK (brak głównego węzła JPK).");
             }
 
-            const getTagVal = (tagName, parent = xmlDoc) => {
-                const els = parent.getElementsByTagName("*");
+            // --- Helpery ---
+            
+            // Znajdź pierwszy element o nazwie tagName (ignorując namespace) wewnątrz context
+            const findElement = (tagName, context) => {
+                const els = context.getElementsByTagName("*");
                 for (let i = 0; i < els.length; i++) {
-                    if (els[i].localName === tagName) return els[i].textContent;
+                    if (els[i].localName === tagName) return els[i];
                 }
                 return null;
             };
 
-            const kodFormularza = getTagVal("KodFormularza");
-            const dataOd = getTagVal("DataOd");
-            const dataDo = getTagVal("DataDo");
-            let nip = getTagVal("NIP");
+            // Znajdź wszystkie elementy o nazwie tagName wewnątrz context
+            const findElements = (tagName, context) => {
+                const result = [];
+                const els = context.getElementsByTagName("*");
+                for (let i = 0; i < els.length; i++) {
+                    if (els[i].localName === tagName) result.push(els[i]);
+                }
+                return result;
+            };
 
-            // Sukces - Używamy koloru Accent (Zielony)
+            const getText = (tagName, context) => {
+                const el = findElement(tagName, context);
+                return el ? el.textContent.trim() : null;
+            };
+
+            // Pobierz wartość liczbową z tagu (zamienia przecinki na kropki, usuwa spacje)
+            const getFloat = (tagName, context) => {
+                const txt = getText(tagName, context);
+                if (!txt) return 0;
+                return parseFloat(txt.replace(',', '.').replace(/\s/g, '')) || 0;
+            };
+
+            // --- Parsowanie Podstawowe ---
+
+            const naglowek = findElement("Naglowek", root) || root;
+            const kodFormularza = getText("KodFormularza", naglowek);
+            const dataOd = getText("DataOd", naglowek);
+            const dataDo = getText("DataDo", naglowek);
+
+            let nip = null;
+            const podmiot = findElement("Podmiot1", root) || findElement("Podmiot", root);
+            if (podmiot) {
+                nip = getText("NIP", podmiot);
+                if (!nip) {
+                    const identyfikator = findElement("IdentyfikatorPodmiotu", podmiot);
+                    if (identyfikator) nip = getText("NIP", identyfikator);
+                }
+            }
+            if (!nip) nip = getText("NIP", root);
+
+            // --- Parsowanie VAT UE (WDT/WNT) ---
+            
+            let sumWdt = 0;
+            let sumWnt = 0;
+            let salesCount = 0;
+
+            // Szukamy wierszy sprzedaży (dla WDT)
+            // Uwaga: W JPK_V7 tagi nazywają się SprzedazWiersz, w starszych też.
+            // Iterujemy po wszystkich elementach o tej nazwie w dokumencie
+            // (zakładamy, że są w odpowiedniej sekcji, ale unikalność nazwy SprzedazWiersz zwykle wystarcza)
+            
+            const saleRows = findElements("SprzedazWiersz", root);
+            salesCount = saleRows.length;
+
+            saleRows.forEach(row => {
+                // K_21: Wewnątrzwspólnotowa dostawa towarów
+                sumWdt += getFloat("K_21", row);
+            });
+
+            // Szukamy wierszy zakupu (dla WNT)
+            const purchaseRows = findElements("ZakupWiersz", root);
+            purchaseRows.forEach(row => {
+                // K_23: Wewnątrzwspólnotowe nabycie towarów
+                sumWnt += getFloat("K_23", row);
+            });
+
+            // --- AKTUALIZACJA UI ---
+
             statusIcon.className = "w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0 bg-accent/10 text-accent";
             statusIcon.innerHTML = '<i class="fa-solid fa-check"></i>';
             statusTitle.textContent = "Plik wygląda poprawnie";
             
             jpkTypeEl.textContent = kodFormularza || "Nieznany kod";
-            jpkDateEl.textContent = `${dataOd || "?"}  —  ${dataDo || "?"}`;
-            jpkNipEl.textContent = nip || "Brak / Nie znaleziono";
-
-            let salesCount = 0;
-            const allEls = xmlDoc.getElementsByTagName("*");
-            for(let i=0; i<allEls.length; i++) {
-                if(allEls[i].localName === "SprzedazWiersz") salesCount++;
+            
+            if (dataOd && dataDo) {
+                jpkDateEl.textContent = `${dataOd}  —  ${dataDo}`;
+            } else {
+                jpkDateEl.textContent = "Brak dat w nagłówku";
             }
             
+            jpkNipEl.textContent = nip || "Brak / Nie znaleziono";
+
+            // Wyświetlanie sekcji VAT UE
+            const formatCurrency = (val) => val.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " zł";
+            
+            if (sumWdt > 0 || sumWnt > 0) {
+                valWdtEl.textContent = formatCurrency(sumWdt);
+                valWntEl.textContent = formatCurrency(sumWnt);
+                vatUeContainer.classList.remove('hidden');
+            }
+
+            // Statystyki
             if (salesCount > 0) {
                 statsContainer.classList.remove('hidden');
                 jpkSalesCount.textContent = salesCount;
@@ -260,7 +364,6 @@
         }
 
         function showError(msg) {
-            // Błąd - Używamy koloru Highlight (Pomarańczowy) zamiast czerwonego
             statusIcon.className = "w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0 bg-highlight/10 text-highlight";
             statusIcon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
             statusTitle.textContent = "Błąd weryfikacji";
