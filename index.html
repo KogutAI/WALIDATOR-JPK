@@ -59,7 +59,8 @@
             
             <div id="drop-area" class="p-10 flex flex-col items-center justify-center border-b border-main/10 border-dashed m-2 rounded-xl bg-main/5 hover:bg-accent/5 transition-colors cursor-pointer relative group">
                 
-                <input type="file" id="file-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".xml">
+                <!-- POPRAWKA: Dodano z-50 aby input był na wierzchu i zawsze klikalny -->
+                <input type="file" id="file-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50" accept=".xml">
                 
                 <div class="w-16 h-16 bg-accent/10 text-accent rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
                     <i class="fa-solid fa-cloud-arrow-up text-2xl"></i>
@@ -170,6 +171,8 @@
 
         fileInput.addEventListener('change', function(e) {
             handleFiles(this.files);
+            // Reset wartości inputa, aby umożliwić ponowne wybranie tego samego pliku (np. po poprawce)
+            this.value = null;
         });
 
         // --- Logika Przetwarzania ---
