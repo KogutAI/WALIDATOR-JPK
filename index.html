@@ -14,31 +14,31 @@
             theme: {
                 extend: {
                     colors: {
-                        brand: {
-                            50: '#f0f9ff',
-                            100: '#e0f2fe',
-                            500: '#0ea5e9',
-                            600: '#0284c7',
-                            900: '#0c4a6e',
-                        }
+                        // Zdefiniowane kolory użytkownika
+                        main: '#00313c',    // Ciemny (teksty, tła)
+                        accent: '#22d47c',  // Zielony (akcenty, sukces)
+                        highlight: '#fdaa63' // Pomarańczowy (ostrzeżenia, błędy)
                     }
                 }
             }
         }
     </script>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
+<body class="bg-main/5 text-main font-sans min-h-screen flex flex-col">
 
     <!-- Nagłówek -->
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-10">
+    <header class="bg-white border-b border-main/10 sticky top-0 z-10">
         <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
             <div class="flex items-center gap-2">
-                <i class="fa-solid fa-file-invoice-dollar text-brand-600 text-2xl"></i>
-                <h1 class="text-xl font-bold text-slate-900 tracking-tight">Walidator JPK <span class="text-xs font-normal text-slate-500 border border-slate-200 rounded px-1.5 py-0.5 ml-2">BETA</span></h1>
+                <i class="fa-solid fa-file-invoice-dollar text-accent text-2xl"></i>
+                <h1 class="text-xl font-bold text-main tracking-tight">
+                    Taxology Walidator JPK 
+                    <span class="text-xs font-normal text-main/60 border border-main/20 rounded px-1.5 py-0.5 ml-2">BETA</span>
+                </h1>
             </div>
-            <nav class="hidden md:flex gap-6 text-sm font-medium text-slate-600">
-                <a href="#" class="hover:text-brand-600 transition">Jak to działa?</a>
-                <a href="#" class="hover:text-brand-600 transition">Bezpieczeństwo</a>
+            <nav class="hidden md:flex gap-6 text-sm font-medium text-main/70">
+                <a href="#" class="hover:text-accent transition">Jak to działa?</a>
+                <a href="#" class="hover:text-accent transition">Bezpieczeństwo</a>
             </nav>
         </div>
     </header>
@@ -47,72 +47,70 @@
     <main class="flex-grow flex flex-col items-center justify-start pt-12 px-4 pb-12">
         
         <div class="text-center mb-10 max-w-2xl">
-            <h2 class="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">Sprawdź swój plik JPK</h2>
-            <p class="text-slate-600 text-lg">
+            <h2 class="text-3xl md:text-4xl font-extrabold text-main mb-4">Sprawdź swój plik JPK</h2>
+            <p class="text-main/70 text-lg">
                 Analiza odbywa się w 100% w Twojej przeglądarce. <br>
-                <span class="font-semibold text-brand-600">Żadne dane nie są wysyłane na serwer.</span>
+                <span class="font-semibold text-accent">Żadne dane nie są wysyłane na serwer.</span>
             </p>
         </div>
 
         <!-- Sekcja Uploadu -->
-        <div class="w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100 transition-all duration-300 hover:shadow-2xl" id="drop-zone">
+        <div class="w-full max-w-2xl bg-white rounded-2xl shadow-xl overflow-hidden border border-main/10 transition-all duration-300 hover:shadow-2xl" id="drop-zone">
             
-            <div id="drop-area" class="p-10 flex flex-col items-center justify-center border-b border-slate-100 border-dashed m-2 rounded-xl bg-slate-50/50 hover:bg-brand-50/30 transition-colors cursor-pointer relative group">
+            <div id="drop-area" class="p-10 flex flex-col items-center justify-center border-b border-main/10 border-dashed m-2 rounded-xl bg-main/5 hover:bg-accent/5 transition-colors cursor-pointer relative group">
                 
-                <input type="file" id="file-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50" accept=".xml">
+                <input type="file" id="file-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".xml">
                 
-                <div class="pointer-events-none flex flex-col items-center">
-                    <div class="w-16 h-16 bg-brand-100 text-brand-600 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                        <i class="fa-solid fa-cloud-arrow-up text-2xl"></i>
-                    </div>
-                    
-                    <h3 class="text-lg font-semibold text-slate-900 mb-1">Przeciągnij plik XML tutaj</h3>
-                    <p class="text-slate-500 text-sm">lub kliknij, aby wybrać plik z dysku</p>
-                    <p class="text-xs text-slate-400 mt-4 font-mono">Obsługiwane: JPK_V7M, JPK_V7K, JPK_FA</p>
+                <div class="w-16 h-16 bg-accent/10 text-accent rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
+                    <i class="fa-solid fa-cloud-arrow-up text-2xl"></i>
                 </div>
+                
+                <h3 class="text-lg font-semibold text-main mb-1">Przeciągnij plik XML tutaj</h3>
+                <p class="text-main/60 text-sm">lub kliknij, aby wybrać plik z dysku</p>
+                <p class="text-xs text-main/40 mt-4 font-mono">Obsługiwane: JPK_V7M, JPK_V7K, JPK_FA</p>
             </div>
 
             <!-- Panel Wyników (domyślnie ukryty) -->
             <div id="result-panel" class="hidden p-6 bg-white animate-fade-in-up">
                 
                 <!-- Status -->
-                <div class="flex items-center gap-4 mb-6 pb-6 border-b border-slate-100">
+                <div class="flex items-center gap-4 mb-6 pb-6 border-b border-main/10">
                     <div id="status-icon" class="w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0"></div>
                     <div>
-                        <h4 id="status-title" class="text-lg font-bold text-slate-900"></h4>
-                        <p id="file-name" class="text-sm text-slate-500 font-mono"></p>
+                        <h4 id="status-title" class="text-lg font-bold text-main"></h4>
+                        <p id="file-name" class="text-sm text-main/50 font-mono"></p>
                     </div>
                 </div>
 
                 <!-- Szczegóły -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div class="p-3 bg-slate-50 rounded-lg">
-                        <span class="block text-slate-400 text-xs uppercase tracking-wider font-semibold mb-1">Typ formularza</span>
-                        <span id="jpk-type" class="text-slate-900 font-medium font-mono text-base">-</span>
+                    <div class="p-3 bg-main/5 rounded-lg">
+                        <span class="block text-main/50 text-xs uppercase tracking-wider font-semibold mb-1">Typ formularza</span>
+                        <span id="jpk-type" class="text-main font-medium font-mono text-base">-</span>
                     </div>
-                    <div class="p-3 bg-slate-50 rounded-lg">
-                        <span class="block text-slate-400 text-xs uppercase tracking-wider font-semibold mb-1">NIP Podmiotu</span>
-                        <span id="jpk-nip" class="text-slate-900 font-medium font-mono text-base">-</span>
+                    <div class="p-3 bg-main/5 rounded-lg">
+                        <span class="block text-main/50 text-xs uppercase tracking-wider font-semibold mb-1">NIP Podmiotu</span>
+                        <span id="jpk-nip" class="text-main font-medium font-mono text-base">-</span>
                     </div>
-                    <div class="p-3 bg-slate-50 rounded-lg md:col-span-2">
-                        <span class="block text-slate-400 text-xs uppercase tracking-wider font-semibold mb-1">Okres rozliczeniowy</span>
-                        <span id="jpk-date" class="text-slate-900 font-medium">-</span>
+                    <div class="p-3 bg-main/5 rounded-lg md:col-span-2">
+                        <span class="block text-main/50 text-xs uppercase tracking-wider font-semibold mb-1">Okres rozliczeniowy</span>
+                        <span id="jpk-date" class="text-main font-medium">-</span>
                     </div>
-                    <!-- Statystyki -->
-                    <div class="p-3 bg-slate-50 rounded-lg md:col-span-2 hidden" id="stats-container">
-                        <span class="block text-slate-400 text-xs uppercase tracking-wider font-semibold mb-1">Liczba faktur sprzedaży</span>
-                        <span id="jpk-sales-count" class="text-slate-900 font-medium">-</span>
+                    <!-- Proste statystyki -->
+                    <div class="p-3 bg-main/5 rounded-lg md:col-span-2 hidden" id="stats-container">
+                        <span class="block text-main/50 text-xs uppercase tracking-wider font-semibold mb-1">Liczba faktur sprzedaży</span>
+                        <span id="jpk-sales-count" class="text-main font-medium">-</span>
                     </div>
                 </div>
 
-                <!-- Debug / Errors -->
-                <div id="error-box" class="hidden mt-4 p-3 bg-red-50 text-red-700 text-sm rounded border border-red-100 font-mono break-all"></div>
+                <!-- Debug / Errors (używamy highlight/orange zamiast red) -->
+                <div id="error-box" class="hidden mt-4 p-3 bg-highlight/10 text-highlight font-medium text-sm rounded border border-highlight/20"></div>
             </div>
         </div>
 
     </main>
 
-    <footer class="bg-white border-t border-slate-200 py-8 text-center text-sm text-slate-500">
+    <footer class="bg-white border-t border-main/10 py-8 text-center text-sm text-main/50">
         <p>&copy; 2024 Walidator JPK Client-Side. Kod demonstracyjny.</p>
     </footer>
 
@@ -122,7 +120,6 @@
         const resultPanel = document.getElementById('result-panel');
         const dropArea = document.getElementById('drop-area');
         
-        // Elementy UI
         const statusIcon = document.getElementById('status-icon');
         const statusTitle = document.getElementById('status-title');
         const fileNameEl = document.getElementById('file-name');
@@ -134,7 +131,7 @@
         const jpkSalesCount = document.getElementById('jpk-sales-count');
 
         // --- Obsługa Drag & Drop ---
-
+        
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             dropArea.addEventListener(eventName, preventDefaults, false);
             document.body.addEventListener(eventName, preventDefaults, false);
@@ -154,11 +151,13 @@
         });
 
         function highlight(e) {
-            dropArea.classList.add('bg-brand-50', 'border-brand-300');
+            dropArea.classList.add('bg-accent/5', 'border-accent');
+            dropArea.classList.remove('border-main/10');
         }
 
         function unhighlight(e) {
-            dropArea.classList.remove('bg-brand-50', 'border-brand-300');
+            dropArea.classList.remove('bg-accent/5', 'border-accent');
+            dropArea.classList.add('border-main/10');
         }
 
         dropArea.addEventListener('drop', handleDrop, false);
@@ -169,34 +168,26 @@
             handleFiles(files);
         }
 
-        // --- Obsługa kliknięcia (standardowy input) ---
-        
         fileInput.addEventListener('change', function(e) {
             handleFiles(this.files);
         });
 
-        // --- Główna logika ---
+        // --- Logika Przetwarzania ---
 
         function handleFiles(files) {
             if (!files || files.length === 0) return;
             
             const file = files[0];
             
-            // Reset UI
             resultPanel.classList.remove('hidden');
             errorBox.classList.add('hidden');
             statsContainer.classList.add('hidden');
             fileNameEl.textContent = file.name;
             
-            // Loading UI
+            // Loading state (używamy koloru Main)
             statusTitle.textContent = "Analizowanie pliku...";
-            statusIcon.className = "w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0 bg-blue-100 text-blue-600";
+            statusIcon.className = "w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0 bg-main/10 text-main";
             statusIcon.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-
-            if (!file.name.toLowerCase().endsWith('.xml')) {
-                showError("To nie wygląda na plik XML. Wybierz plik z rozszerzeniem .xml");
-                return;
-            }
 
             const reader = new FileReader();
             
@@ -206,14 +197,13 @@
                     try {
                         parseJPK(content);
                     } catch (err) {
-                        showError("Błąd odczytu: " + err.message);
-                        console.error(err);
+                        showError("Błąd parsowania: " + err.message);
                     }
                 }, 300);
             };
 
             reader.onerror = function() {
-                showError("Nie udało się odczytać pliku. Sprawdź uprawnienia lub czy plik nie jest uszkodzony.");
+                showError("Nie udało się odczytać pliku.");
             };
 
             reader.readAsText(file);
@@ -223,141 +213,52 @@
             const parser = new DOMParser();
             const xmlDoc = parser.parseFromString(xmlString, "text/xml");
 
-            // 1. Sprawdź błędy parsera XML
-            const parserError = xmlDoc.getElementsByTagName("parsererror");
-            if (parserError.length > 0) {
-                throw new Error("Niepoprawna składnia XML.");
+            if (xmlDoc.getElementsByTagName("parsererror").length > 0) {
+                throw new Error("Plik nie jest poprawnym formatem XML.");
             }
 
-            // 2. Sprawdź czy to plik JPK
             const root = xmlDoc.documentElement;
-            if (!root.nodeName.toUpperCase().includes("JPK")) {
-                throw new Error(`To nie jest plik JPK. Główny element to: <${root.nodeName}>`);
+            if (!root.nodeName.includes("JPK")) {
+                throw new Error("To nie wygląda na plik JPK (brak głównego węzła JPK).");
             }
 
-            // --- Helpery do nawigacji po XML (ignorujące namespace) ---
-            
-            // Znajduje pierwszy węzeł o danej nazwie lokalnej (wewnątrz parenta)
-            const findNode = (tagName, parent = xmlDoc) => {
-                const walker = document.createTreeWalker(parent, NodeFilter.SHOW_ELEMENT, null, false);
-                while(walker.nextNode()) {
-                    if(walker.currentNode.localName.toLowerCase() === tagName.toLowerCase()) {
-                        return walker.currentNode;
-                    }
+            const getTagVal = (tagName, parent = xmlDoc) => {
+                const els = parent.getElementsByTagName("*");
+                for (let i = 0; i < els.length; i++) {
+                    if (els[i].localName === tagName) return els[i].textContent;
                 }
                 return null;
             };
 
-            // Zwraca wartość tekstową bezpośredniego dziecka o danej nazwie
-            const getChildText = (element, childName) => {
-                if (!element) return null;
-                for (let i = 0; i < element.children.length; i++) {
-                    if (element.children[i].localName.toLowerCase() === childName.toLowerCase()) {
-                        return element.children[i].textContent;
-                    }
-                }
-                return null;
-            };
+            const kodFormularza = getTagVal("KodFormularza");
+            const dataOd = getTagVal("DataOd");
+            const dataDo = getTagVal("DataDo");
+            let nip = getTagVal("NIP");
 
-            // Zwraca wartość tekstową dowolnego węzła w dół drzewa (fallback)
-            const getGlobalText = (tagName, parent = xmlDoc) => {
-                const node = findNode(tagName, parent);
-                return node ? node.textContent : null;
-            };
-
-
-            // 3. Pobieranie Danych
-            let kodFormularza = null;
-            let dataOd = null;
-            let dataDo = null;
-            // Nowe zmienne dla JPK_V7 (gdzie daty są jako Rok/Miesiac)
-            let rok = null;
-            let miesiac = null;
-            let nip = null;
-
-            // Krok A: Znajdź sekcję Naglowek
-            const naglowekNode = findNode("Naglowek", root);
-
-            if (naglowekNode) {
-                kodFormularza = getChildText(naglowekNode, "KodFormularza");
-                dataOd = getChildText(naglowekNode, "DataOd");
-                dataDo = getChildText(naglowekNode, "DataDo");
-                // Pobieramy też Rok i Miesiąc (dla JPK_V7)
-                rok = getChildText(naglowekNode, "Rok");
-                miesiac = getChildText(naglowekNode, "Miesiac");
-            } else {
-                // Fallback
-                kodFormularza = getGlobalText("KodFormularza", root);
-                dataOd = getGlobalText("DataOd", root);
-                dataDo = getGlobalText("DataDo", root);
-                rok = getGlobalText("Rok", root);
-                miesiac = getGlobalText("Miesiac", root);
-            }
-
-            // Krok B: Znajdź NIP
-            const podmiotNode = findNode("Podmiot1", root) || findNode("Podmiot", root);
-            
-            if (podmiotNode) {
-                // Wariant 1: Bezpośrednio w podmiocie (starsze JPK)
-                nip = getChildText(podmiotNode, "NIP");
-                
-                // Wariant 2: Zagnieżdżony (JPK_V7)
-                if (!nip) {
-                    let idPodmiotuNode = null;
-                    for(let child of podmiotNode.children) {
-                        if (child.localName.toLowerCase() === "identyfikatorpodmiotu") {
-                            idPodmiotuNode = child;
-                            break;
-                        }
-                    }
-                    if (idPodmiotuNode) {
-                        nip = getChildText(idPodmiotuNode, "NIP");
-                    }
-                }
-            }
-            if (!nip) nip = getGlobalText("NIP", root);
-
-
-            // 4. Prezentacja wyników
-            statusIcon.className = "w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0 bg-green-100 text-green-600";
+            // Sukces - Używamy koloru Accent (Zielony)
+            statusIcon.className = "w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0 bg-accent/10 text-accent";
             statusIcon.innerHTML = '<i class="fa-solid fa-check"></i>';
             statusTitle.textContent = "Plik wygląda poprawnie";
             
-            jpkTypeEl.textContent = kodFormularza || "Nieznany typ";
-            
-            // Formatowanie daty (Obsługa DataOd/Do oraz Rok/Miesiac)
-            if (dataOd && dataDo) {
-                jpkDateEl.textContent = `${dataOd} — ${dataDo}`;
-                jpkDateEl.classList.remove("text-red-500");
-            } else if (rok && miesiac) {
-                jpkDateEl.textContent = `Rok: ${rok} / Miesiąc: ${miesiac}`;
-                jpkDateEl.classList.remove("text-red-500");
-            } else {
-                jpkDateEl.textContent = "Nie znaleziono dat (Sprawdź sekcję Naglowek)";
-                jpkDateEl.classList.add("text-red-500");
-            }
-
+            jpkTypeEl.textContent = kodFormularza || "Nieznany kod";
+            jpkDateEl.textContent = `${dataOd || "?"}  —  ${dataDo || "?"}`;
             jpkNipEl.textContent = nip || "Brak / Nie znaleziono";
 
-            // 5. Statystyki
             let salesCount = 0;
-            const walker = document.createTreeWalker(xmlDoc, NodeFilter.SHOW_ELEMENT, null, false);
-            while(walker.nextNode()) {
-                if (walker.currentNode.localName === "SprzedazWiersz") {
-                    salesCount++;
-                }
+            const allEls = xmlDoc.getElementsByTagName("*");
+            for(let i=0; i<allEls.length; i++) {
+                if(allEls[i].localName === "SprzedazWiersz") salesCount++;
             }
             
             if (salesCount > 0) {
                 statsContainer.classList.remove('hidden');
                 jpkSalesCount.textContent = salesCount;
-            } else {
-                statsContainer.classList.add('hidden');
             }
         }
 
         function showError(msg) {
-            statusIcon.className = "w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0 bg-red-100 text-red-600";
+            // Błąd - Używamy koloru Highlight (Pomarańczowy) zamiast czerwonego
+            statusIcon.className = "w-12 h-12 rounded-full flex items-center justify-center text-xl shrink-0 bg-highlight/10 text-highlight";
             statusIcon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
             statusTitle.textContent = "Błąd weryfikacji";
             
