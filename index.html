@@ -94,7 +94,7 @@
                     </div>
                     <div class="p-3 bg-main/5 rounded-lg md:col-span-2">
                         <span class="block text-main/50 text-xs uppercase tracking-wider font-semibold mb-1">Okres rozliczeniowy</span>
-                        <span id="jpk-date" class="text-main font-medium">-</span>
+                        <span id="jpk-date" class="text-main font-medium capitalize">-</span>
                     </div>
                 </div>
 
@@ -256,7 +256,6 @@
 
             // --- Helpery ---
             
-            // Znajdź pierwszy element o nazwie tagName (ignorując namespace) wewnątrz context
             const findElement = (tagName, context) => {
                 const els = context.getElementsByTagName("*");
                 for (let i = 0; i < els.length; i++) {
@@ -265,7 +264,6 @@
                 return null;
             };
 
-            // Znajdź wszystkie elementy o nazwie tagName wewnątrz context
             const findElements = (tagName, context) => {
                 const result = [];
                 const els = context.getElementsByTagName("*");
@@ -280,22 +278,46 @@
                 return el ? el.textContent.trim() : null;
             };
 
-            // Pobierz wartość liczbową z tagu (zamienia przecinki na kropki, usuwa spacje)
+            // Ulepszone pobieranie float - obsługuje też tagi z prefiksem P_ jeśli K_ nie istnieje
             const getFloat = (tagName, context) => {
-                const txt = getText(tagName, context);
+                // Najpierw szukaj dokładnej nazwy (np. K_21)
+                let txt = getText(tagName, context);
+                
+                // Jeśli nie ma, spróbuj alternatywnej nazwy (np. P_21 dla starych schematów lub błędów)
+                if (!txt && tagName.startsWith("K_")) {
+                    const altName = tagName.replace("K_", "P_");
+                    txt = getText(altName, context);
+                }
+
                 if (!txt) return 0;
                 return parseFloat(txt.replace(',', '.').replace(/\s/g, '')) || 0;
+            };
+
+            // Formatowanie daty na słowne (PL)
+            const formatDateVerbose = (dateStr) => {
+                if (!dateStr) return null;
+                try {
+                    const date = new Date(dateStr);
+                    if (isNaN(date.getTime())) return dateStr;
+                    return date.toLocaleDateString('pl-PL', { 
+                        day: 'numeric', 
+                        month: 'long', 
+                        year: 'numeric' 
+                    });
+                } catch(e) {
+                    return dateStr;
+                }
             };
 
             // --- Parsowanie Podstawowe ---
 
             const naglowek = findElement("Naglowek", root) || root;
             const kodFormularza = getText("KodFormularza", naglowek);
-            let dataOd = getText("DataOd", naglowek);
-            let dataDo = getText("DataDo", naglowek);
+            let dataOdRaw = getText("DataOd", naglowek);
+            let dataDoRaw = getText("DataDo", naglowek);
 
             // LOGIKA DLA JPK_V7 (brak DataOd/DataDo, jest Rok i Miesiac/Kwartal)
-            if (!dataOd || !dataDo) {
+            if (!dataOdRaw || !dataDoRaw) {
                 const rok = getText("Rok", naglowek);
                 const miesiac = getText("Miesiac", naglowek);
                 const kwartal = getText("Kwartal", naglowek);
@@ -303,26 +325,25 @@
                 if (rok && miesiac) {
                     // JPK_V7M
                     const m = miesiac.padStart(2, '0');
-                    dataOd = `${rok}-${m}-01`;
+                    dataOdRaw = `${rok}-${m}-01`;
                     // Ostatni dzień miesiąca
                     const lastDay = new Date(parseInt(rok), parseInt(miesiac), 0).getDate();
-                    dataDo = `${rok}-${m}-${lastDay}`;
+                    dataDoRaw = `${rok}-${m}-${lastDay}`;
                 } else if (rok && kwartal) {
                     // JPK_V7K
                     const q = parseInt(kwartal);
                     const startMonth = (q - 1) * 3 + 1;
                     const endMonth = startMonth + 2;
                     
-                    dataOd = `${rok}-${String(startMonth).padStart(2, '0')}-01`;
+                    dataOdRaw = `${rok}-${String(startMonth).padStart(2, '0')}-01`;
                     const lastDay = new Date(parseInt(rok), endMonth, 0).getDate();
-                    dataDo = `${rok}-${String(endMonth).padStart(2, '0')}-${lastDay}`;
+                    dataDoRaw = `${rok}-${String(endMonth).padStart(2, '0')}-${lastDay}`;
                 }
             }
 
             let nip = null;
             const podmiot = findElement("Podmiot1", root) || findElement("Podmiot", root);
             if (podmiot) {
-                // getElementByTagName szuka głęboko, więc znajdzie NIP nawet jeśli jest w IdentyfikatorPodmiotu
                 nip = getText("NIP", podmiot);
             }
             if (!nip) nip = getText("NIP", root);
@@ -356,8 +377,9 @@
             
             jpkTypeEl.textContent = kodFormularza || "Nieznany kod";
             
-            if (dataOd && dataDo) {
-                jpkDateEl.textContent = `${dataOd}  —  ${dataDo}`;
+            if (dataOdRaw && dataDoRaw) {
+                // Używamy formatowania słownego
+                jpkDateEl.textContent = `${formatDateVerbose(dataOdRaw)} — ${formatDateVerbose(dataDoRaw)}`;
             } else {
                 jpkDateEl.textContent = "Brak dat (nieznany format)";
             }
@@ -367,12 +389,16 @@
             // Wyświetlanie sekcji VAT UE
             const formatCurrency = (val) => val.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " zł";
             
-            // Pokazujemy sekcję jeśli znaleziono jakiekolwiek wartości (nawet 0, jeśli format wskazywałby na możliwość ich istnienia, ale tutaj bezpieczniej > 0)
-            // LUB jeśli plik to JPK_V7 (gdzie te pola są standardem) - ale zostańmy przy > 0 dla czytelności
-            if (sumWdt > 0 || sumWnt > 0) {
+            // POPRAWKA: Pokaż sekcję VAT UE zawsze dla JPK_V7, nawet jeśli sumy to 0, 
+            // lub dla innych plików jeśli sumy > 0. To potwierdza użytkownikowi, że sprawdzono te pola.
+            const isV7 = kodFormularza && (kodFormularza.includes("V7M") || kodFormularza.includes("V7K"));
+            
+            if (isV7 || sumWdt > 0 || sumWnt > 0) {
                 valWdtEl.textContent = formatCurrency(sumWdt);
                 valWntEl.textContent = formatCurrency(sumWnt);
                 vatUeContainer.classList.remove('hidden');
+            } else {
+                vatUeContainer.classList.add('hidden');
             }
 
             // Statystyki
